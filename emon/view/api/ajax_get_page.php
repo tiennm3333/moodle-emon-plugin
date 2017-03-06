@@ -57,7 +57,8 @@
 	        $q->questiontext = file_prepare_draft_area($draftid, $context->id,
 	                'question', 'questiontext', empty($q->id) ? null : (int) $q->id,
 	                $fileoptions, $q->questiontext);
-	                                
+			$q->questiontext = str_replace("\"$CFG->httpswwwroot/brokenfile.php#", "\"$CFG->httpswwwroot/draftfile.php", $q->questiontext);
+
 			if ($methods[$q->qtype]) {
 				$q->question_body = $views->$methods[$q->qtype]($q->id, $q->questiontext, $q);
 			}

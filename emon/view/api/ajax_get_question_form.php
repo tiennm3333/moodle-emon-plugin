@@ -45,7 +45,8 @@
 	        $question->questiontext = file_prepare_draft_area($draftid, $context->id,
 	                'question', 'questiontext', empty($question->id) ? null : (int) $question->id,
 	                $fileoptions, $question->questiontext);
-	        
+			$question->questiontext = str_replace("\"$CFG->httpswwwroot/brokenfile.php#", "\"$CFG->httpswwwroot/draftfile.php", $question->questiontext);
+
     	} else {
     		$question = new StdClass;
     		$question->qtype = $params['qtype'];
