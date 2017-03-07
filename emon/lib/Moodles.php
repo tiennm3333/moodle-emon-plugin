@@ -448,28 +448,38 @@ class MoodlesManager
 
 		// get question categories
 		$contexts = $contexts->having_one_edit_tab_cap('editq');
+		$pages = array();
+
         if ($CFG->branch < 27)
         {
             $questions = explode(',', $quiz->questions);
+	        $pageNumber = 1;
+	        foreach ($questions as $q) {
+		        if (!isset($pages[$pageNumber]['question_count'])) {
+			        $pages[$pageNumber]['question_count'] = 0;
+		        }
+		        $pages[$pageNumber]['page_number'] = $pageNumber;
+
+		        if ($q > 0) {
+			        $pages[$pageNumber]['questions'][] = $q;
+			        $pages[$pageNumber]['question_count']++;
+		        } else {
+			        $pageNumber++;
+		        }
+	        }
         } else {
-            $questions = $this->get_questions_new($quiz->id);
+	        $questions = $DB->get_records_select('quiz_slots', 'quizid = ? ', array($quiz->id), '', 'questionid, page');
+	        foreach ($questions as $q) {
+		        $pageNumber = $q->page ? $q->page : 1;
+		        if (!isset($pages[$pageNumber]['question_count'])) {
+			        $pages[$pageNumber]['question_count'] = 0;
+		        }
+		        $pages[$pageNumber]['page_number'] = $pageNumber;
+		        $pages[$pageNumber]['questions'][] = $q->questionid;
+		        $pages[$pageNumber]['question_count']++;
+	        }
         }
 
-		$pageNumber = 1;
-		$pages = array();
-		foreach ($questions as $q) {
-			if (!isset($pages[$pageNumber]['question_count'])) {
-				$pages[$pageNumber]['question_count'] = 0;
-			}
-			$pages[$pageNumber]['page_number'] = $pageNumber;
-
-			if ($q > 0) {
-				$pages[$pageNumber]['questions'][] = $q;
-				$pages[$pageNumber]['question_count']++;
-			} else {
-				$pageNumber++;
-			}
-		}
 		return $pages;
 	}
 
@@ -792,7 +802,9 @@ class MoodlesManager
 		// set question to quiz
 		if (!$id) {
 			list($module, $cm) = get_module_from_cmid($cmid);
-			quiz_add_quiz_question($question->id, $module);
+
+			$pageNumber = $post['page_number'] ? (int)$post['page_number'] : 0;
+			quiz_add_quiz_question($question->id, $module, $pageNumber);
 		}
 
 		/*
