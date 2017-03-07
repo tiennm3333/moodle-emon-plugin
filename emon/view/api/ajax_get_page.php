@@ -59,7 +59,7 @@
 	                $fileoptions, $q->questiontext);
 	                                
 			if ($methods[$q->qtype]) {
-				$q->question_body = $views->$methods[$q->qtype]($q->id, $q->questiontext, $q);
+				$q->question_body = $views->{$methods[$q->qtype]}($q->id, $q->questiontext, $q);
 			}
 		}
 	}

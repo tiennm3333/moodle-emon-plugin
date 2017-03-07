@@ -26,7 +26,7 @@ class MoodlesManager
 			);
 			$option = $params['option'];
 			if ($methods[$params['qtype']]) {
-				$converters->$methods[$params['qtype']]($params, $option);
+				$converters->{$methods[$params['qtype']]}($params, $option);
 			}
 		}
 
@@ -135,7 +135,42 @@ class MoodlesManager
 				$questions[] = $question;
 			}
 		}
+
+//		if ($CFG->branch < 27)
+//		{
+//			$questions = explode(',', $quiz->questions);
+//			$pageNumber = 1;
+//			foreach ($questions as $q) {
+//				if (!isset($pages[$pageNumber]['question_count'])) {
+//					$pages[$pageNumber]['question_count'] = 0;
+//				}
+//				$pages[$pageNumber]['page_number'] = $pageNumber;
+//
+//				if ($q > 0) {
+//					$pages[$pageNumber]['questions'][] = $q;
+//					$pages[$pageNumber]['question_count']++;
+//				} else {
+//					$pageNumber++;
+//				}
+//			}
+//		} else {
+//			$questions = $DB->get_records_select('quiz_slots', 'quizid = ? ', array($quiz->id), '', 'questionid, page');
+//			foreach ($questions as $q) {
+//				$pageNumber = $q->page ? $q->page : 1;
+//				if (!isset($pages[$pageNumber]['question_count'])) {
+//					$pages[$pageNumber]['question_count'] = 0;
+//				}
+//				$pages[$pageNumber]['page_number'] = $pageNumber;
+//				$pages[$pageNumber]['questions'][] = $q->questionid;
+//				$pages[$pageNumber]['question_count']++;
+//			}
+//		}
+
 		$quiz->questions = implode(",", $questions);
+
+//		echo '<pre>';
+//		var_dump($quiz->questions);die;
+
 		$quiz->questions = $quiz->questions . ',0';
 		// Avoid duplicate page breaks
 		while (strpos($quiz->questions, ',0,0')) {
@@ -148,6 +183,15 @@ class MoodlesManager
                 error('Could not save question list');
             }
         }
+
+//		// capability check
+//		require_capability('mod/quiz:manage', $contexts->lowest());
+//
+//		// get question categories
+//		$contexts = $contexts->having_one_edit_tab_cap('editq');
+
+//		echo '<pre>';
+//		var_dump($quiz->questions);die;
 			
 		// preview delete
 		$previewattempts = $DB->get_records_select('quiz_attempts', 'quiz = ? AND preview = 1', array($quiz->id));
@@ -448,28 +492,38 @@ class MoodlesManager
 
 		// get question categories
 		$contexts = $contexts->having_one_edit_tab_cap('editq');
+		$pages = array();
+
         if ($CFG->branch < 27)
         {
             $questions = explode(',', $quiz->questions);
+	        $pageNumber = 1;
+	        foreach ($questions as $q) {
+		        if (!isset($pages[$pageNumber]['question_count'])) {
+			        $pages[$pageNumber]['question_count'] = 0;
+		        }
+		        $pages[$pageNumber]['page_number'] = $pageNumber;
+
+		        if ($q > 0) {
+			        $pages[$pageNumber]['questions'][] = $q;
+			        $pages[$pageNumber]['question_count']++;
+		        } else {
+			        $pageNumber++;
+		        }
+	        }
         } else {
-            $questions = $this->get_questions_new($quiz->id);
+	        $questions = $DB->get_records_select('quiz_slots', 'quizid = ? ', array($quiz->id), '', 'questionid, page');
+	        foreach ($questions as $q) {
+		        $pageNumber = $q->page ? $q->page : 1;
+		        if (!isset($pages[$pageNumber]['question_count'])) {
+			        $pages[$pageNumber]['question_count'] = 0;
+		        }
+		        $pages[$pageNumber]['page_number'] = $pageNumber;
+		        $pages[$pageNumber]['questions'][] = $q->questionid;
+		        $pages[$pageNumber]['question_count']++;
+	        }
         }
 
-		$pageNumber = 1;
-		$pages = array();
-		foreach ($questions as $q) {
-			if (!isset($pages[$pageNumber]['question_count'])) {
-				$pages[$pageNumber]['question_count'] = 0;
-			}
-			$pages[$pageNumber]['page_number'] = $pageNumber;
-
-			if ($q > 0) {
-				$pages[$pageNumber]['questions'][] = $q;
-				$pages[$pageNumber]['question_count']++;
-			} else {
-				$pageNumber++;
-			}
-		}
 		return $pages;
 	}
 
@@ -792,7 +846,9 @@ class MoodlesManager
 		// set question to quiz
 		if (!$id) {
 			list($module, $cm) = get_module_from_cmid($cmid);
-			quiz_add_quiz_question($question->id, $module);
+
+			$pageNumber = $post['page_number'] ? (int)$post['page_number'] : 0;
+			quiz_add_quiz_question($question->id, $module, $pageNumber);
 		}
 
 		/*

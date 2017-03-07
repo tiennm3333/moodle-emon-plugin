@@ -71,7 +71,7 @@
 			if ($methods[$question->qtype]) {
 				$arrayQuestion = array();
 				setArray($question, $arrayQuestion);
-	    		$question = $converters->$methods[$question->qtype]($arrayQuestion);
+	    		$question = $converters->{$methods[$question->qtype]}($arrayQuestion);
         	}
 			
 	    	foreach ($question as $k => $v) {
