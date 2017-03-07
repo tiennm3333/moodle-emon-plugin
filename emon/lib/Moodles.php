@@ -26,7 +26,7 @@ class MoodlesManager
 			);
 			$option = $params['option'];
 			if ($methods[$params['qtype']]) {
-				$converters->$methods[$params['qtype']]($params, $option);
+				$converters->{$methods[$params['qtype']]}($params, $option);
 			}
 		}
 
