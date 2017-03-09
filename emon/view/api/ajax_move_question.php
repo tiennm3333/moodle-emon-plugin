@@ -16,6 +16,8 @@
 	$params['page_number'] = optional_param('page_number', 1, PARAM_INT);
 	$params['mode'] = optional_param('mode', '', PARAM_TEXT);
 	$params['questionid'] = optional_param('questionid', 0, PARAM_INT);
+	$params['previousid'] = optional_param('previousid', 0, PARAM_INT);
+	$params['nextid'] = optional_param('nextid', 0, PARAM_INT);
 	$params['question_ids'] = optional_param_array('question_ids', array(), PARAM_INT);
 
 	//並び替え処理

@@ -63,6 +63,9 @@
 			if ($methods[$q->qtype]) {
 				$q->question_body = $views->{$methods[$q->qtype]}($q->id, $q->questiontext, $q);
 			}
+
+			$q->previousid = $number > 1 ? $questions[$number - 2]->id : 0;
+			$q->nextid = $number < count($questions) - 1 ? $questions[$number + 1]->id : 0;
 		}
 	}
 	$params['questions'] = $questions;

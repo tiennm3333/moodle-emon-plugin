@@ -33,10 +33,10 @@
 						<span class="question_type"><?php $this->p('types', $q->qtype) ?></span><br />
 						<?php if (!$this->g('is_attempts')) { ?>
 							<?php if ($number > 1) { ?>
-								<a href="#" onclick="moveSort(<?php $this->p('cmid') ?>, <?php $this->p('page_number') ?>, <?php echo $q->id ?>, 'u'); return false;"><img src="resources/images/icon_044.gif" /> </a><br />
+								<a href="#" onclick="moveSort(<?php $this->p('cmid') ?>, <?php $this->p('page_number') ?>, <?php echo $q->id ?>, 'u', <?php echo $q->previousid ?>, <?php echo $q->nextid ?>); return false;"><img src="resources/images/icon_044.gif" /> </a><br />
 							<?php } ?>
 							<?php if ($number < count($this->g('questions'))) { ?>
-								<a href="#" onclick="moveSort(<?php $this->p('cmid') ?>, <?php $this->p('page_number') ?>, <?php echo $q->id ?>, 'd'); return false;"><img src="resources/images/icon_018.gif" /> </a><br />
+								<a href="#" onclick="moveSort(<?php $this->p('cmid') ?>, <?php $this->p('page_number') ?>, <?php echo $q->id ?>, 'd', <?php echo $q->previousid ?>, <?php echo $q->nextid ?>); return false;"><img src="resources/images/icon_018.gif" /> </a><br />
 							<?php } ?>
 						<?php } ?>
 					</td>

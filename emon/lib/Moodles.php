@@ -99,7 +99,7 @@ class MoodlesManager
 	 * @param	array	$pages		array(ページ番号 => array('questions' => array(問題ID)))
 	 * @return	array	最新の番号順
 	 */
-	function setPageOrders($cmid, $pages)
+	function setPageOrders($cmid, $pages, $post = array())
 	{
 		global $CFG, $DB;
 
@@ -111,6 +111,15 @@ class MoodlesManager
             require_once($CFG->dirroot . '/question/editlib.php');
         }
 		// End
+        if ($CFG->branch >= 30) {
+            list($thispageurl, $contexts, $cmid, $cm, $quiz, $pagevars) = question_edit_setup('editq', true);
+            if(!empty($post)) {
+                require_once($CFG->dirroot . '/mod/quiz/locallib.php');
+                $this->updateSlotQuestions($quiz, $post);
+            }
+            $this->deleteQuizAttenptsPreview($quiz);
+            return true;
+        }
 
 		// 配列の設定
 		$overwritePages = array();
@@ -148,16 +157,22 @@ class MoodlesManager
                 error('Could not save question list');
             }
         }
-			
-		// preview delete
-		$previewattempts = $DB->get_records_select('quiz_attempts', 'quiz = ? AND preview = 1', array($quiz->id));
-		if ($previewattempts) {
-			foreach ($previewattempts as $attempt) {
-				quiz_delete_attempt($attempt, $quiz);
-			}
-		}
-		return true;
+
+        $this->deleteQuizAttenptsPreview($quiz);
+
+        return true;
 	}
+
+    public function deleteQuizAttenptsPreview($quiz) {
+        // preview delete
+        global $DB;
+        $previewattempts = $DB->get_records_select('quiz_attempts', 'quiz = ? AND preview = 1', array($quiz->id));
+        if ($previewattempts) {
+            foreach ($previewattempts as $attempt) {
+                quiz_delete_attempt($attempt, $quiz);
+            }
+        }
+    }
 
 
 	/**
@@ -225,9 +240,14 @@ class MoodlesManager
 
                 $slotNumber = $DB->get_field_sql($sql, $params);
 
-                if (!$structure->remove_slot($quiz, $slotNumber))
-                {
-                    return false;
+                if ($CFG->branch >= 30) {
+                    if (!$structure->remove_slot($slotNumber)) {
+                        return false;
+                    }
+                } else {
+                    if (!$structure->remove_slot($quiz, $slotNumber)) {
+                        return false;
+                    }
                 }
             }
             // End
@@ -235,14 +255,8 @@ class MoodlesManager
             return false;
         }
 
-		// preview delete
-		$previewattempts = get_records_select('quiz_attempts',
-				'quiz = ' . $quiz->id . ' AND preview = 1');
-		if ($previewattempts) {
-			foreach ($previewattempts as $attempt) {
-				quiz_delete_attempt($attempt, $quiz);
-			}
-		}
+        $this->deleteQuizAttenptsPreview($quiz);
+
 		return true;
 	}
 
@@ -468,16 +482,16 @@ class MoodlesManager
 		        }
 	        }
         } else {
-	        $questions = $DB->get_records_select('quiz_slots', 'quizid = ? ', array($quiz->id), '', 'questionid, page');
-	        foreach ($questions as $q) {
-		        $pageNumber = $q->page ? $q->page : 1;
-		        if (!isset($pages[$pageNumber]['question_count'])) {
-			        $pages[$pageNumber]['question_count'] = 0;
-		        }
-		        $pages[$pageNumber]['page_number'] = $pageNumber;
-		        $pages[$pageNumber]['questions'][] = $q->questionid;
-		        $pages[$pageNumber]['question_count']++;
-	        }
+            $questions = $DB->get_records_select('quiz_slots', 'quizid = ? ', array($quiz->id), 'slot ASC', 'questionid, page');
+            foreach ($questions as $q) {
+                $pageNumber = $q->page ? $q->page : 1;
+                if (!isset($pages[$pageNumber]['question_count'])) {
+                    $pages[$pageNumber]['question_count'] = 0;
+                }
+                $pages[$pageNumber]['page_number'] = $pageNumber;
+                $pages[$pageNumber]['questions'][] = $q->questionid;
+                $pages[$pageNumber]['question_count']++;
+            }
         }
 
 		return $pages;
@@ -1128,4 +1142,33 @@ class MoodlesManager
         return $DB->get_fieldset_sql($sql, $params);
     }
 
+    public function updateSlotQuestions($quiz, $post) {
+        $questionId = isset($post['questionid']) ? $post['questionid'] : 0;
+        $pageNumber = isset($post['page_number']) ? $post['page_number'] : 0;
+        $mode = isset($post['mode']) ? $post['mode'] : '';
+        $previousId = isset($post['previousid']) ? $post['previousid'] : 0;
+        $nextId = isset($post['nextid']) ? $post['nextid'] : 0;
+        $previousId = $mode == 'u' ? $previousId : $nextId;
+
+        global $DB;
+        $cm = get_coursemodule_from_instance('quiz', $quiz->id, $quiz->course);
+        $course = $DB->get_record('course', array('id' => $quiz->course), '*', MUST_EXIST);
+        require_login($course, false, $cm);
+
+        $quizobj = new quiz($quiz, $cm, $course);
+        $structure = $quizobj->get_structure();
+
+        $sql = 'SELECT id FROM {quiz_sections}
+                WHERE quizid = :quizid';
+        $sectionid = $DB->get_field_sql($sql, array('quizid' => $quiz->id));
+
+        if (!$previousId) {
+            $section = $structure->get_section_by_id($sectionid);
+            if ($section->firstslot > 1) {
+                $previousId = $structure->get_slot_id_for_slot($section->firstslot - 1);
+                $pageNumber = $structure->get_page_number_for_slot($section->firstslot);
+            }
+        }
+        $structure->move_slot($questionId, $previousId, $pageNumber);
+    }
 }

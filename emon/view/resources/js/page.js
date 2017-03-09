@@ -134,7 +134,7 @@ function getMoodlePageForEdit(cmid, pageNumber) {
 	getMoodlePages(cmid, pageNumber);
 }
 
-function moveSort(cmid, pageNumber, questionId, mode) {
+	function moveSort(cmid, pageNumber, questionId, mode, previousId, nextId) {
 	// ページ一覧を取得
 	$.ajax({
 		type : 'get',
@@ -142,6 +142,8 @@ function moveSort(cmid, pageNumber, questionId, mode) {
 		url : '../api/ajax_move_question.php',
 		data : 'cmid=' + cmid + '&page_number=' + pageNumber + '&mode=' + mode
 				+ '&questionid=' + questionId + '&'
+				+ 'previousid=' + previousId + '&'
+				+ 'nextid=' + nextId + '&'
 				+ $('#question_sort').sortable('serialize'),
 		beforeSend : function(XMLHttpRequest) {
 			loading();
