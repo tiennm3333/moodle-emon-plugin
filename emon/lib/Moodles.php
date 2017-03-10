@@ -114,8 +114,47 @@ class MoodlesManager
         if ($CFG->branch >= 30) {
             list($thispageurl, $contexts, $cmid, $cm, $quiz, $pagevars) = question_edit_setup('editq', true);
             if(!empty($post)) {
-                require_once($CFG->dirroot . '/mod/quiz/locallib.php');
-                $this->updateSlotQuestions($quiz, $post);
+                if ($post['drog_sort']) {
+	                $questionAfterSort = $post['question_ids'];
+                    if (isset($questionAfterSort) && is_array($questionAfterSort)) {
+                        $pageNumber = isset($post['page_number']) ? $post['page_number'] : 1;
+	                    echo '<pre>';
+	                    var_dump($this->getQuestionsOfPage($quiz->id, $pageNumber));die;
+	                    $questionBeforeSort = $this->getQuestionsSlotOfPage($quiz->id, $pageNumber);
+
+	                    $questionBeforeSort2 = array();
+	                    foreach ($questionBeforeSort as $q) {
+		                    $questionBeforeSort2[] = $q;
+	                    }
+	                    if ($questionBeforeSort2 == $questionAfterSort) {
+		                    echo '<pre>';
+		                    var_dump($questionAfterSort,$questionBeforeSort);die;
+		                    $this->deleteQuizAttenptsPreview($quiz);
+		                    return true;
+	                    }
+	                    $slotreorder = $this->slotsAfterReorder($questionBeforeSort, $questionAfterSort);
+
+	                    echo '<pre>';
+	                    var_dump($slotreorder);die;
+
+	                    update_field_with_unique_index('quiz_slots', 'slot', $slotreorder, array('quizid' => $quiz->id));
+
+//	                    $structure->update_f
+
+//	                    $trans = $DB->start_delegated_transaction();
+//                        foreach ($post['question_ids'] as $slot => $question) {
+//                            $DB->execute('
+//                                    UPDATE {quiz_slots}
+//                                    SET slot = ?
+//                                    WHERE quizid = ? AND questionid = ? AND page = ?
+//                                    ', array($slot + 1, $quiz->id, $question, $pageNumber));
+//                        }
+//	                    $trans->allow_commit();
+                    }
+                } else {
+	                require_once($CFG->dirroot . '/mod/quiz/locallib.php');
+                    $this->updateSlotQuestions($quiz, $post);
+                }
             }
             $this->deleteQuizAttenptsPreview($quiz);
             return true;
@@ -1143,14 +1182,24 @@ class MoodlesManager
     }
 
     public function updateSlotQuestions($quiz, $post) {
+        global $DB;
         $questionId = isset($post['questionid']) ? $post['questionid'] : 0;
         $pageNumber = isset($post['page_number']) ? $post['page_number'] : 0;
         $mode = isset($post['mode']) ? $post['mode'] : '';
         $previousId = isset($post['previousid']) ? $post['previousid'] : 0;
         $nextId = isset($post['nextid']) ? $post['nextid'] : 0;
-        $previousId = $mode == 'u' ? $previousId : $nextId;
 
-        global $DB;
+        if ($mode == 'u') {
+            if ($pageNumber > 1 && !$previousId) {
+                $Ids = $this->getIdsOfLastSlotOfPage($quiz->id, $pageNumber - 1);
+                if (isset($Ids[0])) {
+                    $previousId = $Ids[0];
+                }
+            }
+        } else {
+            $previousId = $nextId;
+        }
+
         $cm = get_coursemodule_from_instance('quiz', $quiz->id, $quiz->course);
         $course = $DB->get_record('course', array('id' => $quiz->course), '*', MUST_EXIST);
         require_login($course, false, $cm);
@@ -1171,4 +1220,66 @@ class MoodlesManager
         }
         $structure->move_slot($questionId, $previousId, $pageNumber);
     }
+
+    public function getIdsOfLastSlotOfPage($quizId, $page) {
+        global $DB;
+        $sql = 'SELECT id FROM {quiz_slots}
+                WHERE quizid = :quizid AND page = :page
+                ORDER BY slot DESC';
+        $params = array(
+            'quizid' => $quizId,
+            'page' => $page,
+        );
+
+        return $DB->get_fieldset_sql($sql, $params);
+    }
+
+	public function getQuestionsSlotOfPage($quizId, $page) {
+		global $DB;
+//		$sql = 'SELECT questionid, slot FROM {quiz_slots}
+//                WHERE quizid = :quizid AND page = :page
+//                ORDER BY slot ASC';
+//		$params = array(
+//			'quizid' => $quizId,
+//			'page' => $page,
+//		);
+
+//		return $DB->get_records_sql($sql, $params);
+		$questions = array();
+		$questionsNoSlot = array();
+		$questionSlot = $DB->get_records_select('quiz_slots', 'quizid = ? AND page = ? ', array($quizId, $page), 'slot ASC', 'questionid, slot');
+		if (is_array($questionSlot)) {
+			foreach ($questionSlot as $slot => $question) {
+				$questions[$slot] = $question;
+				$questionsNoSlot[] = $question;
+			}
+		}
+		return array($questions, $questionsNoSlot);
+
+	}
+
+	public function changeSlot($slotA, $slotB, $keys){
+		$result = array();
+		$result[$keys[$slotA-1]] = $keys[$slotB-1];
+		for ($i=$slotB; $i<$slotA; $i++) {
+			$result[$keys[$i-1]] = $keys[$i];
+		}
+		return $result;
+	}
+
+	public function slotsAfterReorder($a, $b) {
+		$keys = array_keys($a);
+		$a = array_values($a);
+		$l = 0;
+		$r = count($a)-1;
+		while ($a[$l] == $b[$l]) $l++;
+		$l++;
+		while ($a[$r] == $b[$r]) $r--;
+		$r++;
+		return $this->changeSlot($r, $l, $keys);
+	}
+
+//$a = array(48, 49, 50, 51);
+//$b = array(50, 48, 49, 51);
+//var_dump(diffArray($a, $b));
 }

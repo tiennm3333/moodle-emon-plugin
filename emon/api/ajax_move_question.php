@@ -19,6 +19,7 @@
 	$params['previousid'] = optional_param('previousid', 0, PARAM_INT);
 	$params['nextid'] = optional_param('nextid', 0, PARAM_INT);
 	$params['question_ids'] = optional_param_array('question_ids', array(), PARAM_INT);
+	$params['drog_sort'] = optional_param('drog_sort', false, PARAM_BOOL);
 
 	//並び替え処理
 	$number = 0;

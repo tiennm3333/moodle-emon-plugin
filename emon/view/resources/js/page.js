@@ -117,8 +117,7 @@ function getMoodlePageForEdit(cmid, pageNumber) {
 			$('#question_sort').sortable(
 					{
 						stop : function() {
-							setMoveQuestions(cmid, pageNumber, $(this)
-									.sortable('serialize'));
+							setMoveQuestions(cmid, pageNumber, $(this).sortable('serialize'), true);
 						}
 					});
 			$('.question_drag').draggable({
@@ -149,6 +148,7 @@ function getMoodlePageForEdit(cmid, pageNumber) {
 			loading();
 		},
 		success : function(result) {
+			console.log(result);
 			getMoodlePageForEdit(cmid, pageNumber);
 		},
 		complete : function(result) {
@@ -157,18 +157,19 @@ function getMoodlePageForEdit(cmid, pageNumber) {
 	});
 }
 
-function setMoveQuestions(cmid, pageNumber, questionIds) {
+function setMoveQuestions(cmid, pageNumber, questionIds , drogSort) {
 	// ページ一覧を取得
 	$.ajax({
 		type : 'get',
 		cache : false,
 		url : '../api/ajax_move_question.php',
 		data : 'cmid=' + cmid + '&page_number=' + pageNumber + '&'
-				+ questionIds,
+				+ questionIds + '&drog_sort=' + drogSort,
 		beforeSend : function(XMLHttpRequest) {
 			loading();
 		},
 		success : function(result) {
+			console.log(result);
 			getMoodlePageForEdit(cmid, pageNumber);
 		},
 		complete : function(result) {
