@@ -118,24 +118,27 @@ class MoodlesManager
 	                $questionAfterSort = $post['question_ids'];
                     if (isset($questionAfterSort) && is_array($questionAfterSort)) {
                         $pageNumber = isset($post['page_number']) ? $post['page_number'] : 1;
-	                    echo '<pre>';
-	                    var_dump($this->getQuestionsOfPage($quiz->id, $pageNumber));die;
+//	                    echo '<pre>';
+//	                    var_dump($this->getQuestionsOfPage($quiz->id, $pageNumber));die;
 	                    $questionBeforeSort = $this->getQuestionsSlotOfPage($quiz->id, $pageNumber);
 
-	                    $questionBeforeSort2 = array();
-	                    foreach ($questionBeforeSort as $q) {
-		                    $questionBeforeSort2[] = $q;
-	                    }
-	                    if ($questionBeforeSort2 == $questionAfterSort) {
-		                    echo '<pre>';
-		                    var_dump($questionAfterSort,$questionBeforeSort);die;
+//	                    echo '<pre>';
+//		                    var_dump($questionBeforeSort);die;
+
+//	                    $questionBeforeSort2 = array();
+//	                    foreach ($questionBeforeSort as $q) {
+//		                    $questionBeforeSort2[] = $q;
+//	                    }
+	                    if ($questionBeforeSort[1] == $questionAfterSort) {
+//		                    echo '<pre>';
+//		                    var_dump($questionAfterSort,$questionBeforeSort);die;
 		                    $this->deleteQuizAttenptsPreview($quiz);
 		                    return true;
 	                    }
-	                    $slotreorder = $this->slotsAfterReorder($questionBeforeSort, $questionAfterSort);
+	                    $slotreorder = $this->slotsAfterReorder($questionBeforeSort[0], $questionAfterSort);
 
-	                    echo '<pre>';
-	                    var_dump($slotreorder);die;
+//	                    echo '<pre>';
+//	                    var_dump($slotreorder);die;
 
 	                    update_field_with_unique_index('quiz_slots', 'slot', $slotreorder, array('quizid' => $quiz->id));
 
@@ -152,6 +155,8 @@ class MoodlesManager
 //	                    $trans->allow_commit();
                     }
                 } else {
+//	                echo '<pre>';
+//                    var_dump('aaaaaaaaa');die;
 	                require_once($CFG->dirroot . '/mod/quiz/locallib.php');
                     $this->updateSlotQuestions($quiz, $post);
                 }
@@ -1234,30 +1239,35 @@ class MoodlesManager
         return $DB->get_fieldset_sql($sql, $params);
     }
 
+	/**
+	 * Get questions of quiz
+	 *
+	 * @param int $quizId id of quiz.
+	 * @param int $page page number of quiz.
+	 * @return mixed array[0] with key include slot number , array[1] only questions value
+	 */
 	public function getQuestionsSlotOfPage($quizId, $page) {
 		global $DB;
-//		$sql = 'SELECT questionid, slot FROM {quiz_slots}
-//                WHERE quizid = :quizid AND page = :page
-//                ORDER BY slot ASC';
-//		$params = array(
-//			'quizid' => $quizId,
-//			'page' => $page,
-//		);
-
-//		return $DB->get_records_sql($sql, $params);
 		$questions = array();
 		$questionsNoSlot = array();
 		$questionSlot = $DB->get_records_select('quiz_slots', 'quizid = ? AND page = ? ', array($quizId, $page), 'slot ASC', 'questionid, slot');
 		if (is_array($questionSlot)) {
-			foreach ($questionSlot as $slot => $question) {
-				$questions[$slot] = $question;
-				$questionsNoSlot[] = $question;
+			foreach ($questionSlot as $q) {
+				$questions[$q->slot] = $q->questionid;
+				$questionsNoSlot[] = $q->questionid;
 			}
 		}
-		return array($questions, $questionsNoSlot);
 
+		return array($questions, $questionsNoSlot);
 	}
 
+	/**
+	 * change slot of array
+	 *
+	 * @param int $slotA
+	 * @param int $slotB
+	 * @return array after change inddex to value
+	 */
 	public function changeSlot($slotA, $slotB, $keys){
 		$result = array();
 		$result[$keys[$slotA-1]] = $keys[$slotB-1];
@@ -1266,6 +1276,7 @@ class MoodlesManager
 		}
 		return $result;
 	}
+
 
 	public function slotsAfterReorder($a, $b) {
 		$keys = array_keys($a);
@@ -1278,8 +1289,4 @@ class MoodlesManager
 		$r++;
 		return $this->changeSlot($r, $l, $keys);
 	}
-
-//$a = array(48, 49, 50, 51);
-//$b = array(50, 48, 49, 51);
-//var_dump(diffArray($a, $b));
 }
